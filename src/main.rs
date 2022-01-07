@@ -9,23 +9,28 @@ use rand::Rng;
 
 fn main() {
     let args:Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        panic!("not enough arguments"); 
+    }
 
     if args[1].eq("-g") {
-        let num_megabytes_in_key_str = &args[2];
-        let num_megabytes_in_key = num_megabytes_in_key_str.parse::<usize>().expect("Failed to parse int argument to `-g` flag");
+        if args.len() < 3 {
+            panic!("not enough arguments. provide length of one-time-pad key");
+        }
+        let key_len_mb = &args[2].parse::<usize>().expect("Failed to parse int argument to `-g` flag");
         const BYTES_PER_MEGABYTE:usize = 1024 * 1024; // 1024 bytes -> kb, 1024 kb -> mb
-        let mut num_bytes_in_key = num_megabytes_in_key * BYTES_PER_MEGABYTE;
+        let mut key_len_bytes = key_len_mb * BYTES_PER_MEGABYTE;
         let mut rng = rand::thread_rng();
 
         const MAX_CHUNK_SIZE_BYTES: usize = 256 * BYTES_PER_MEGABYTE;
         let mut chunk = Vec::with_capacity(MAX_CHUNK_SIZE_BYTES);
-        while num_bytes_in_key > 0 {
-            let num_bytes_in_chunk = std::cmp::min(num_bytes_in_key, MAX_CHUNK_SIZE_BYTES);
+        while key_len_bytes > 0 {
+            let num_bytes_in_chunk = std::cmp::min(key_len_bytes, MAX_CHUNK_SIZE_BYTES);
             for _ in 0..num_bytes_in_chunk {
                 chunk.push(rng.gen());
             }
-            io::stdout().write_all(&chunk).expect("Write error");
-            num_bytes_in_key -= num_bytes_in_chunk;
+            io::stdout().write_all(&chunk).expect("Output Error. Try piping to a file.");
+            key_len_bytes -= num_bytes_in_chunk;
         }
     } else {
         let file_name = &args[1];
