@@ -19,18 +19,18 @@ fn main() {
         }
         let key_len_mb = &args[2].parse::<usize>().expect("Failed to parse int argument to `-g` flag");
         const BYTES_PER_MEGABYTE:usize = 1024 * 1024; // 1024 bytes -> kb, 1024 kb -> mb
-        let mut key_len_bytes = key_len_mb * BYTES_PER_MEGABYTE;
+        let key_len_bytes = key_len_mb * BYTES_PER_MEGABYTE;
         let mut rng = rand::thread_rng();
 
-        const MAX_CHUNK_SIZE_BYTES: usize = 256 * BYTES_PER_MEGABYTE;
-        let mut chunk = Vec::with_capacity(MAX_CHUNK_SIZE_BYTES);
-        while key_len_bytes > 0 {
-            let num_bytes_in_chunk = std::cmp::min(key_len_bytes, MAX_CHUNK_SIZE_BYTES);
-            for _ in 0..num_bytes_in_chunk {
-                chunk.push(rng.gen());
-            }
-            io::stdout().write_all(&chunk).expect("Output Error. Try piping to a file.");
-            key_len_bytes -= num_bytes_in_chunk;
+        const MAX_CHUNK_SIZE_BYTES: usize = BYTES_PER_MEGABYTE/2;
+        let mut chunk = [0u8; MAX_CHUNK_SIZE_BYTES];
+        let mut out = io::stdout();
+        let mut bytes_written = 0;
+        while bytes_written < key_len_bytes {
+            let bytes_to_write = (key_len_bytes - bytes_written).clamp(0,MAX_CHUNK_SIZE_BYTES);
+            rng.fill(&mut chunk[..bytes_to_write]);
+ 
+            bytes_written += out.write(&chunk).expect("Output Error. Try piping to a file.");
         }
     } else {
         let file_name = &args[1];
