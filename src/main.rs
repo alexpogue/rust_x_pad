@@ -1,5 +1,5 @@
 use std::env;
-use std::fs::File;
+use std::fs;
 use std::io::Write;
 use std::io;
 use rand::Rng;
@@ -18,7 +18,7 @@ fn main() {
 
         let mut out: Box<dyn Write> = Box::new(io::stdout());
         if args.len() >= 5 && args[3] == "-o" {
-            out = Box::new(File::create(&args[4]).expect("Unable to create file"));
+            out = Box::new(fs::File::create(&args[4]).expect("Unable to create file"));
         }
 
         const BYTES_PER_MEGABYTE:usize = 1024 * 1024; // 1024 bytes -> kb, 1024 kb -> mb
@@ -36,18 +36,20 @@ fn main() {
         }
         out.flush().unwrap();
     } else {
-        if args.len() < 4 {
+        if args.len() < 3 {
             panic!("not enough arguments"); 
         }
-        let key = std::fs::read(&args[1]).unwrap();
-        let message = std::fs::read(&args[2]).unwrap();
+        let key = fs::read(&args[1]).unwrap();
+        let message = fs::read(&args[2]).unwrap();
 
         let result: Vec<u8> = message.iter()
                 .zip(key[..message.len()].iter())
                 .map(|(x, y)| *x ^ *y)
                 .collect();
-        let mut out = File::create(&args[3]).unwrap();
+
+        let mut out = fs::OpenOptions::new().write(true).truncate(true).open(&args[2]).unwrap();
         out.write(&result).expect("unable to write file");
         out.flush().unwrap();
+        fs::remove_file(&args[1]).unwrap();
     }
 }
