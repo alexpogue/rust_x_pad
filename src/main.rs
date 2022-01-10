@@ -1,9 +1,6 @@
 use std::env;
-use std::process;
 use std::fs::File;
-use std::io::ErrorKind;
-use std::io::{BufReader, Read, Write};
-use std::io::Error;
+use std::io::Write;
 use std::io;
 use rand::Rng;
 
@@ -37,66 +34,20 @@ fn main() {
             rng.fill(&mut chunk[..bytes_to_write]);
             bytes_written += out.write(&chunk).expect("Output Error. Try piping to a file.");
         }
+        out.flush().unwrap();
     } else {
-        let file_name = &args[1];
-        let f = File::open(file_name).expect("Unable to open file");
-        let mut br = BufReader::new(f);
+        if args.len() < 4 {
+            panic!("not enough arguments"); 
+        }
+        let key = std::fs::read(&args[1]).unwrap();
+        let message = std::fs::read(&args[2]).unwrap();
 
-        let mut stdin = io::stdin();
-
-        let mut key_buf: [u8; 128] = [0; 128];
-        let mut message_buf: [u8; 128] = [0; 128];
-        let mut key_n = 1;
-        let mut message_n = 1;
-
-        while key_n != 0 && message_n != 0 {
-            message_n = match read_and_retry_upon_interrupt(&mut stdin, &mut message_buf, 0, 5) {
-                Ok(n) => n,
-                Err(e) => print_file_read_error_and_abort(file_name, e),
-            };
-            if message_n == 0 {
-                break;
-            }
-            key_n = match read_and_retry_upon_interrupt(&mut br, &mut key_buf, message_n.try_into().unwrap(), 5) {
-                Ok(n) => n,
-                Err(e) => print_file_read_error_and_abort(file_name, e),
-            };
-
-            if key_n < message_n {
-                eprintln!("Error: message is longer than key");
-                process::abort();
-            }
-
-            let result: Vec<u8> = message_buf.iter()
-                .zip(key_buf.iter())
+        let result: Vec<u8> = message.iter()
+                .zip(key[..message.len()].iter())
                 .map(|(x, y)| *x ^ *y)
                 .collect();
-
-            io::stdout().write(&result[0..message_n]).expect("Write error");
-        }
+        let mut out = File::create(&args[3]).unwrap();
+        out.write(&result).expect("unable to write file");
+        out.flush().unwrap();
     }
-}
-
-fn read_and_retry_upon_interrupt(read_from:&mut dyn Read, read_to:&mut[u8], limit:u64, retry_times:u8) -> Result<usize, Error> {
-    let limited:&mut dyn Read = &mut read_from.take(limit);
-    let limited_read_from:&mut dyn Read = if limit > 0 {
-         limited
-    } else {
-        read_from
-    };
-    for _ in 0..retry_times-1 {
-        match limited_read_from.read(read_to) {
-            Ok(n) => return Ok(n),
-            Err(e) => match e.kind() {
-                ErrorKind::Interrupted => continue,
-                _ => return Err(e),
-            },
-        };
-    };
-    return limited_read_from.read(read_to);
-}
-
-fn print_file_read_error_and_abort(file_name:&String, e:std::io::Error) -> ! {
-    eprintln!("Error reading from message file {}, error = {}", file_name, e);
-    process::abort();
 }
