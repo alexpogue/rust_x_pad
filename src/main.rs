@@ -50,6 +50,5 @@ fn main() {
         let mut out = fs::OpenOptions::new().write(true).truncate(true).open(&args[2]).unwrap();
         out.write(&result).expect("unable to write file");
         out.flush().unwrap();
-        fs::remove_file(&args[1]).unwrap();
     }
 }

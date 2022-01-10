@@ -21,5 +21,5 @@ For example, generate a 100mb key and output to a file
 
 ```./rust_x_pad KEY MESSAGE```
 
-Both parameters are relative file paths. The message will be encrypted, and THE KEY WILL BE DELETED. Ensure the recipient has a copy before running this command. To decripy the message, the exact same command is used.
+Both parameters are relative file paths. The message will be encrypted or decrypted with the provided key.
 
